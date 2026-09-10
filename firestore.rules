@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId == userId &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('preferredLanguage' in data) || (data.preferredLanguage in ['bn', 'en']));
+    }
+
+    function isValidAuditRecord(data, userId) {
+      return data.userId == userId &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.docName is string && data.docName.size() <= 256 &&
+        data.docType is string && data.docType.size() <= 64 &&
+        data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100 &&
+        data.confidenceScore is number && data.confidenceScore >= 0 && data.confidenceScore <= 100 &&
+        (!('summaryBn' in data) || (data.summaryBn is string && data.summaryBn.size() <= 2000)) &&
+        (!('summaryEn' in data) || (data.summaryEn is string && data.summaryEn.size() <= 2000)) &&
+        (!('potentialSavings' in data) || (data.potentialSavings is string && data.potentialSavings.size() <= 128)) &&
+        (!('currency' in data) || (data.currency is string && data.currency.size() <= 16));
+    }
+
+    function isValidActivityLog(data, userId) {
+      return data.userId == userId &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.actionType is string && data.actionType.size() <= 64 &&
+        data.details is string && data.details.size() <= 1000 &&
+        data.complianceStatus in ['COMPLIANT', 'FLAGGED', 'REVIEW_REQUIRED', 'INFO'] &&
+        (!('docName' in data) || (data.docName is string && data.docName.size() <= 256)) &&
+        (!('docType' in data) || (data.docType is string && data.docType.size() <= 64)) &&
+        (!('riskScore' in data) || (data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100)) &&
+        (!('clientEnvironment' in data) || (data.clientEnvironment is string && data.clientEnvironment.size() <= 128));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow delete: if false;
+
+      match /audits/{auditId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(auditId) && isValidAuditRecord(incoming(), userId);
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(auditId);
+      }
+
+      match /activity_logs/{logId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(logId) && isValidActivityLog(incoming(), userId);
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+    }
+  }
+}

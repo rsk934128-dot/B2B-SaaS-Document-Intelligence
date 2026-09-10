@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and enterprise audit workspace settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "preferredLanguage": { "type": "string", "enum": ["bn", "en"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "AuditRecord": {
+      "title": "AuditRecord",
+      "description": "Persisted document audit report and risk assessment",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "docName": { "type": "string", "maxLength": 256 },
+        "docType": { "type": "string", "maxLength": 64 },
+        "riskScore": { "type": "number" },
+        "confidenceScore": { "type": "number" },
+        "summaryBn": { "type": "string", "maxLength": 2000 },
+        "summaryEn": { "type": "string", "maxLength": 2000 },
+        "potentialSavings": { "type": "string", "maxLength": 128 },
+        "currency": { "type": "string", "maxLength": 16 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "docName", "docType", "riskScore", "confidenceScore", "createdAt"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Enterprise compliance audit log tracking user document processing and system actions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "actionType": { "type": "string", "maxLength": 64 },
+        "docName": { "type": "string", "maxLength": 256 },
+        "docType": { "type": "string", "maxLength": 64 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "complianceStatus": { "type": "string", "enum": ["COMPLIANT", "FLAGGED", "REVIEW_REQUIRED", "INFO"] },
+        "riskScore": { "type": "number" },
+        "clientEnvironment": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "actionType", "details", "complianceStatus", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile documents stored by user UID"
+    },
+    "/users/{userId}/audits/{auditId}": {
+      "schema": { "$ref": "#/entities/AuditRecord" },
+      "description": "Historical audit findings for the authenticated user"
+    },
+    "/users/{userId}/activity_logs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Enterprise compliance audit logs tracking document operations and user actions"
+    }
+  }
+}

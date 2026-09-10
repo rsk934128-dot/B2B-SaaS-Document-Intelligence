@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Base App Background with Rounded Squircle -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+  <rect x="12" y="12" width="488" height="488" rx="103" stroke="#334155" stroke-width="3" stroke-opacity="0.6" fill="none" />
+
+  <!-- Outer Ambient Glow Ring -->
+  <circle cx="256" cy="256" r="190" stroke="url(#primaryGrad)" stroke-width="2" stroke-opacity="0.25" stroke-dasharray="8 6" />
+
+  <!-- Document Silhouette -->
+  <g filter="url(#glow)">
+    <path d="M168 116 H296 L364 184 V388 C364 401.255 353.255 412 340 412 H168 C154.745 412 144 401.255 144 388 V140 C144 126.745 154.745 116 168 116 Z"
+          fill="#1e293b" stroke="url(#primaryGrad)" stroke-width="7" stroke-linejoin="round" />
+    <!-- Folded Corner -->
+    <path d="M296 116 V184 H364 Z" fill="url(#primaryGrad)" fill-opacity="0.85" />
+  </g>
+
+  <!-- Document Internal Lines / Neural Waveform -->
+  <line x1="184" y1="210" x2="260" y2="210" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" />
+  <line x1="184" y1="246" x2="324" y2="246" stroke="#64748b" stroke-width="5" stroke-linecap="round" />
+  <line x1="184" y1="282" x2="268" y2="282" stroke="#64748b" stroke-width="5" stroke-linecap="round" />
+
+  <!-- AI Intelligence Neural Circuit Node Lines -->
+  <path d="M220 330 L256 300 L292 330" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="220" cy="330" r="5" fill="#38bdf8" />
+  <circle cx="256" cy="300" r="6" fill="#38bdf8" filter="url(#glow)" />
+  <circle cx="292" cy="330" r="5" fill="#38bdf8" />
+
+  <!-- Security Compliance Shield (Bottom Right) -->
+  <g transform="translate(290, 276)">
+    <path d="M54 10 L94 26 V68 C94 92 76 114 54 124 C32 114 14 92 14 68 V26 L54 10 Z"
+          fill="url(#shieldGrad)" stroke="#34d399" stroke-width="4" />
+    <!-- Checkmark inside Shield -->
+    <path d="M38 66 L48 76 L70 52" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+
+  <!-- Top Corner Sparkle / Gemini Star -->
+  <g transform="translate(132, 110)">
+    <path d="M12 0 L15 9 L24 12 L15 15 L12 24 L9 15 L0 12 L9 9 Z" fill="url(#goldGrad)" />
+  </g>
+</svg>
