@@ -70,7 +70,9 @@ export type ActivityActionType =
   | 'AUDIT_SAVED'
   | 'REPORT_EXPORTED_DRIVE'
   | 'AUDIT_DELETED'
-  | 'WORKSPACE_AUTH';
+  | 'WORKSPACE_AUTH'
+  | 'SUBSCRIPTION_UPGRADED'
+  | 'SUBSCRIPTION_CANCELLED';
 
 export type ComplianceStatusType = 'COMPLIANT' | 'FLAGGED' | 'REVIEW_REQUIRED' | 'INFO';
 
@@ -146,4 +148,78 @@ export interface CalculatedFinancials {
   estimatedValuation: number;
   ltvMonths: number;
   ltvPerCustomer: number;
+}
+
+export type SubscriptionTierId = 'starter' | 'professional' | 'enterprise';
+export type BillingCycle = 'monthly' | 'annual';
+
+export interface SubscriptionTier {
+  id: SubscriptionTierId;
+  nameBn: string;
+  nameEn: string;
+  taglineBn: string;
+  taglineEn: string;
+  monthlyPrice: number;
+  annualMonthlyPrice: number;
+  highlighted?: boolean;
+  badgeBn?: string;
+  badgeEn?: string;
+  featuresBn: string[];
+  featuresEn: string[];
+  docLimitPerMonth: number;
+  driveSync: boolean;
+  compliancePdfs: boolean;
+  teamSeats: number;
+  dedicatedManager: boolean;
+  slaUptime: string;
+}
+
+export interface UserSubscription {
+  tierId: SubscriptionTierId;
+  billingCycle: BillingCycle;
+  status: 'active' | 'trialing' | 'past_due' | 'canceled';
+  currentPeriodEnd?: string | number | null;
+  docsUsedThisMonth: number;
+  docsLimit: number;
+  lastPaymentDate?: string | null;
+  paymentMethod?: string;
+  stripeSessionId?: string | null;
+  currency: string;
+}
+
+export type NavigationTab =
+  | 'categories'
+  | 'drive'
+  | 'activity'
+  | 'calculator'
+  | 'architect'
+  | 'billing'
+  | 'compliance';
+
+export type NotificationType =
+  | 'AUDIT_COMPLETED'
+  | 'SUBSCRIPTION_CHANGED'
+  | 'SYSTEM_ALERT'
+  | 'USAGE_ALERT';
+
+export type NotificationStatus = 'unread' | 'read' | 'archived';
+
+export interface InAppNotification {
+  id?: string;
+  userId: string;
+  type: NotificationType;
+  titleBn: string;
+  titleEn: string;
+  messageBn: string;
+  messageEn: string;
+  status: NotificationStatus;
+  linkTab?: NavigationTab;
+  metadata?: {
+    docName?: string;
+    riskScore?: number;
+    tierId?: string;
+    billingCycle?: string;
+    timestamp?: string;
+  };
+  createdAt: any;
 }

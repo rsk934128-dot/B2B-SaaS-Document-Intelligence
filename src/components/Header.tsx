@@ -1,6 +1,8 @@
-import React from 'react';
-import { AuthState, Language } from '../types';
+import React, { useState } from 'react';
+import { AuthState, Language, InAppNotification, NavigationTab, SubscriptionTierId } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
+import { NotificationCenter } from './NotificationCenter';
+import { SocialShareModal } from './SocialShareModal';
 import {
   Layers,
   FileCheck2,
@@ -14,11 +16,15 @@ import {
   ShieldCheck,
   User,
   LogIn,
+  CreditCard,
+  BarChart3,
+  Crown,
+  Share2,
 } from 'lucide-react';
 
 interface HeaderProps {
-  currentTab: 'categories' | 'drive' | 'activity' | 'calculator' | 'architect';
-  onSelectTab: (tab: 'categories' | 'drive' | 'activity' | 'calculator' | 'architect') => void;
+  currentTab: NavigationTab;
+  onSelectTab: (tab: NavigationTab) => void;
   language: Language;
   onToggleLanguage: (lang: Language) => void;
   authState: AuthState;
@@ -26,6 +32,11 @@ interface HeaderProps {
   onGoogleSignOut: () => void;
   onConnectDemoWorkspace?: () => void;
   onOpenAuthModal?: () => void;
+  notifications?: InAppNotification[];
+  onMarkNotificationAsRead?: (id: string) => void;
+  onMarkAllNotificationsAsRead?: () => void;
+  onDeleteNotification?: (id: string) => void;
+  userTier?: SubscriptionTierId;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,11 +49,18 @@ export const Header: React.FC<HeaderProps> = ({
   onGoogleSignOut,
   onConnectDemoWorkspace,
   onOpenAuthModal,
+  notifications = [],
+  onMarkNotificationAsRead,
+  onMarkAllNotificationsAsRead,
+  onDeleteNotification,
+  userTier = 'starter',
 }) => {
   const isBn = language === 'bn';
   const isDemo = authState.accessToken?.startsWith('demo-');
   const hasUser = !!authState.user;
   const hasDrive = !!authState.accessToken;
+  const isPremium = userTier === 'pro' || userTier === 'enterprise';
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -76,6 +94,18 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Action Bar: PWA Install, Language Toggle & Auth */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Multi-Platform Social Share Button */}
+            <button
+              type="button"
+              id="header-social-share-btn"
+              onClick={() => setIsShareModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition cursor-pointer"
+              title={isBn ? 'সোশ্যাল মিডিয়ায় শেয়ার করুন' : 'Share on social media'}
+            >
+              <Share2 className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">{isBn ? 'শেয়ার' : 'Share'}</span>
+            </button>
+
             {/* In-App Mobile/Desktop Install Button */}
             <PWAInstallButton language={language} />
 
@@ -106,6 +136,18 @@ export const Header: React.FC<HeaderProps> = ({
                 English
               </button>
             </div>
+
+            {/* In-App Real-Time Notification Center */}
+            <NotificationCenter
+              notifications={notifications}
+              language={language}
+              onMarkAsRead={(id) => onMarkNotificationAsRead && onMarkNotificationAsRead(id)}
+              onMarkAllAsRead={() => onMarkAllNotificationsAsRead && onMarkAllNotificationsAsRead()}
+              onDeleteNotification={(id) => onDeleteNotification && onDeleteNotification(id)}
+              onNavigateTab={onSelectTab}
+              isAuthenticated={hasUser}
+              onOpenAuthModal={onOpenAuthModal}
+            />
 
             {/* Firebase Auth & Workspace Status Area */}
             {hasUser ? (
@@ -331,8 +373,57 @@ export const Header: React.FC<HeaderProps> = ({
             <Compass className="w-3.5 h-3.5" />
             {isBn ? 'ইন্ডাস্ট্রি ও টেক স্ট্যাক অ্যাডভাইজার' : 'Tech Stack & Architecture Advisor'}
           </button>
+
+          <button
+            type="button"
+            id="nav-tab-billing"
+            onClick={() => onSelectTab('billing')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              currentTab === 'billing'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+            <span>{isBn ? 'সাবস্ক্রিপশন ও বিলিং' : 'Subscription & Billing'}</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-bold">
+              Stripe
+            </span>
+          </button>
+
+          {/* Enterprise Compliance Dashboard (Integrated for Premium / Enterprise) */}
+          <button
+            type="button"
+            id="nav-tab-compliance"
+            onClick={() => onSelectTab('compliance')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              currentTab === 'compliance'
+                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-xs'
+                : 'text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-900'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+            <span>{isBn ? 'এন্টারপ্রাইজ কমপ্লায়েন্স' : 'Enterprise Compliance'}</span>
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 ${
+                currentTab === 'compliance'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+              }`}
+            >
+              <Crown className="w-2.5 h-2.5" />
+              <span>{isPremium ? 'ENTERPRISE' : 'PRO'}</span>
+            </span>
+          </button>
         </nav>
       </div>
+
+      {/* Multi-Platform Social Media Sharing Modal */}
+      <SocialShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        language={language}
+      />
     </header>
   );
 };

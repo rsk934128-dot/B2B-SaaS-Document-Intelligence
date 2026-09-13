@@ -1,6 +1,6 @@
 {
   "name": "B2B SaaS & Document Intelligence",
-  "description": "High-income B2B SaaS architecture, Google Drive document intelligence, and Firebase Firestore cloud audit persistence.",
+  "description": "High-income B2B SaaS architecture, Google Drive document intelligence, Enterprise Compliance Dashboard with Recharts telemetry, and Firebase Firestore cloud audit persistence.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

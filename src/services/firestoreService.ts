@@ -18,6 +18,11 @@ import {
   ActivityLogItem,
   ActivityActionType,
   ComplianceStatusType,
+  UserSubscription,
+  SubscriptionTierId,
+  BillingCycle,
+  InAppNotification,
+  NotificationType,
 } from '../types';
 
 // Initialize Firestore with custom databaseId as required by Firebase skill
@@ -312,6 +317,208 @@ export async function deleteActivityLogFromFirestore(userId: string, logId: stri
   const path = `users/${userId}/activity_logs/${logId}`;
   try {
     await deleteDoc(doc(db, 'users', userId, 'activity_logs', logId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Real-time listener for user's B2B SaaS subscription status
+ */
+export function subscribeToUserSubscription(
+  userId: string,
+  onUpdate: (subscription: UserSubscription | null) => void,
+  onError?: (error: Error) => void
+): () => void {
+  const path = `users/${userId}/subscription/current`;
+  const subDocRef = doc(db, 'users', userId, 'subscription', 'current');
+
+  return onSnapshot(
+    subDocRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        const d = docSnap.data();
+        onUpdate({
+          tierId: (d.tierId as SubscriptionTierId) || 'starter',
+          billingCycle: (d.billingCycle as BillingCycle) || 'monthly',
+          status: d.status || 'active',
+          currentPeriodEnd: d.currentPeriodEnd || null,
+          docsUsedThisMonth: typeof d.docsUsedThisMonth === 'number' ? d.docsUsedThisMonth : 0,
+          docsLimit: typeof d.docsLimit === 'number' ? d.docsLimit : 150,
+          lastPaymentDate: d.lastPaymentDate || null,
+          paymentMethod: d.paymentMethod || 'Credit Card (Stripe)',
+          stripeSessionId: d.stripeSessionId || null,
+          currency: d.currency || 'USD',
+        });
+      } else {
+        // Default starter tier representation if no document exists yet
+        onUpdate(null);
+      }
+    },
+    (error) => {
+      if (onError) onError(error);
+      handleFirestoreError(error, OperationType.GET, path);
+    }
+  );
+}
+
+/**
+ * Update user subscription tier in Firestore
+ */
+export async function updateUserSubscription(
+  userId: string,
+  subscription: Partial<UserSubscription> & {
+    tierId: SubscriptionTierId;
+    billingCycle: BillingCycle;
+    status: 'active' | 'trialing' | 'past_due' | 'canceled';
+    docsLimit: number;
+  }
+): Promise<void> {
+  const path = `users/${userId}/subscription/current`;
+  const subDocRef = doc(db, 'users', userId, 'subscription', 'current');
+
+  const payload: Record<string, any> = {
+    userId,
+    tierId: subscription.tierId,
+    billingCycle: subscription.billingCycle,
+    status: subscription.status,
+    docsLimit: subscription.docsLimit,
+    docsUsedThisMonth: subscription.docsUsedThisMonth ?? 0,
+    currency: subscription.currency || 'USD',
+    updatedAt: serverTimestamp(),
+  };
+
+  if (subscription.paymentMethod) {
+    payload.paymentMethod = subscription.paymentMethod.slice(0, 120);
+  }
+  if (subscription.lastPaymentDate) {
+    payload.lastPaymentDate = subscription.lastPaymentDate.slice(0, 120);
+  }
+  if (subscription.stripeSessionId) {
+    payload.stripeSessionId = subscription.stripeSessionId.slice(0, 250);
+  }
+
+  try {
+    await setDoc(subDocRef, payload, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Persist an in-app notification to Cloud Firestore
+ * Handles AUDIT_COMPLETED, SUBSCRIPTION_CHANGED, etc.
+ */
+export async function createNotificationInFirestore(
+  userId: string,
+  notification: Omit<InAppNotification, 'userId' | 'createdAt'> & { createdAt?: any }
+): Promise<string> {
+  const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const path = `users/${userId}/notifications/${notifId}`;
+  const notifRef = doc(db, 'users', userId, 'notifications', notifId);
+
+  const payload: Record<string, any> = {
+    userId,
+    type: notification.type,
+    titleEn: notification.titleEn.slice(0, 200),
+    messageEn: notification.messageEn.slice(0, 1000),
+    status: notification.status || 'unread',
+    createdAt: serverTimestamp(),
+  };
+
+  if (notification.titleBn) {
+    payload.titleBn = notification.titleBn.slice(0, 200);
+  }
+  if (notification.messageBn) {
+    payload.messageBn = notification.messageBn.slice(0, 1000);
+  }
+  if (notification.linkTab) {
+    payload.linkTab = notification.linkTab;
+  }
+  if (notification.metadata) {
+    payload.metadata = notification.metadata;
+  }
+
+  try {
+    await setDoc(notifRef, payload);
+    return notifId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+    throw error;
+  }
+}
+
+/**
+ * Real-time listener for user in-app notifications
+ */
+export function subscribeToUserNotifications(
+  userId: string,
+  onUpdate: (notifications: InAppNotification[]) => void,
+  onError?: (error: Error) => void
+): () => void {
+  const path = `users/${userId}/notifications`;
+  const notifsCol = collection(db, 'users', userId, 'notifications');
+  const q = query(notifsCol, orderBy('createdAt', 'desc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: InAppNotification[] = [];
+      snapshot.forEach((docSnap) => {
+        const d = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          userId: d.userId,
+          type: d.type,
+          titleBn: d.titleBn || d.titleEn,
+          titleEn: d.titleEn,
+          messageBn: d.messageBn || d.messageEn,
+          messageEn: d.messageEn,
+          status: d.status || 'unread',
+          linkTab: d.linkTab,
+          metadata: d.metadata,
+          createdAt: d.createdAt,
+        });
+      });
+      onUpdate(items);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Mark a single notification as read or archived
+ */
+export async function updateNotificationStatus(
+  userId: string,
+  notificationId: string,
+  status: 'read' | 'unread' | 'archived'
+): Promise<void> {
+  const path = `users/${userId}/notifications/${notificationId}`;
+  const notifRef = doc(db, 'users', userId, 'notifications', notificationId);
+
+  try {
+    await setDoc(notifRef, { status }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Delete a notification from Cloud Firestore
+ */
+export async function deleteNotificationInFirestore(
+  userId: string,
+  notificationId: string
+): Promise<void> {
+  const path = `users/${userId}/notifications/${notificationId}`;
+  const notifRef = doc(db, 'users', userId, 'notifications', notificationId);
+
+  try {
+    await deleteDoc(notifRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }

@@ -59,10 +59,50 @@ service cloud.firestore {
         (!('clientEnvironment' in data) || (data.clientEnvironment is string && data.clientEnvironment.size() <= 128));
     }
 
+    function isValidUserSubscription(data, userId) {
+      return data.userId == userId &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.tierId in ['starter', 'professional', 'enterprise'] &&
+        data.billingCycle in ['monthly', 'annual'] &&
+        data.status in ['active', 'trialing', 'past_due', 'canceled'] &&
+        data.docsLimit is number && data.docsLimit >= 0 &&
+        (!('docsUsedThisMonth' in data) || (data.docsUsedThisMonth is number && data.docsUsedThisMonth >= 0)) &&
+        (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 128)) &&
+        (!('lastPaymentDate' in data) || (data.lastPaymentDate is string && data.lastPaymentDate.size() <= 128)) &&
+        (!('stripeSessionId' in data) || (data.stripeSessionId is string && data.stripeSessionId.size() <= 256)) &&
+        (!('currency' in data) || (data.currency is string && data.currency.size() <= 16));
+    }
+
+    function isValidInAppNotification(data, userId) {
+      return data.userId == userId &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.type in ['AUDIT_COMPLETED', 'SUBSCRIPTION_CHANGED', 'SYSTEM_ALERT', 'USAGE_ALERT'] &&
+        data.titleEn is string && data.titleEn.size() <= 200 &&
+        data.messageEn is string && data.messageEn.size() <= 1000 &&
+        data.status in ['unread', 'read', 'archived'] &&
+        (!('titleBn' in data) || (data.titleBn is string && data.titleBn.size() <= 200)) &&
+        (!('messageBn' in data) || (data.messageBn is string && data.messageBn.size() <= 1000)) &&
+        (!('linkTab' in data) || data.linkTab in ['categories', 'drive', 'activity', 'calculator', 'architect', 'billing', 'compliance']);
+    }
+
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow create, update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
       allow delete: if false;
+
+      match /subscription/{subDoc} {
+        allow get: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(subDoc) && isValidUserSubscription(incoming(), userId);
+        allow delete: if false;
+      }
+
+      match /notifications/{notificationId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(notificationId) && isValidInAppNotification(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(notificationId) && isValidInAppNotification(incoming(), userId);
+        allow delete: if isOwner(userId) && isValidId(notificationId);
+      }
 
       match /audits/{auditId} {
         allow get: if isOwner(userId);

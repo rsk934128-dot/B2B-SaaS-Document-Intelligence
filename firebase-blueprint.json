@@ -48,6 +48,51 @@
         "createdAt": { "type": "string" }
       },
       "required": ["userId", "actionType", "details", "complianceStatus", "createdAt"]
+    },
+    "UserSubscription": {
+      "title": "UserSubscription",
+      "description": "B2B SaaS subscription tier status, usage quota, and Stripe billing lifecycle",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "tierId": { "type": "string", "enum": ["starter", "professional", "enterprise"] },
+        "billingCycle": { "type": "string", "enum": ["monthly", "annual"] },
+        "status": { "type": "string", "enum": ["active", "trialing", "past_due", "canceled"] },
+        "docsUsedThisMonth": { "type": "number" },
+        "docsLimit": { "type": "number" },
+        "paymentMethod": { "type": "string", "maxLength": 128 },
+        "lastPaymentDate": { "type": "string", "maxLength": 128 },
+        "stripeSessionId": { "type": "string", "maxLength": 256 },
+        "currency": { "type": "string", "maxLength": 16 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "tierId", "billingCycle", "status", "docsLimit"]
+    },
+    "InAppNotification": {
+      "title": "InAppNotification",
+      "description": "In-app alerts notifying the user when document audits complete or subscription status changes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["AUDIT_COMPLETED", "SUBSCRIPTION_CHANGED", "SYSTEM_ALERT", "USAGE_ALERT"] },
+        "titleBn": { "type": "string", "maxLength": 200 },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "messageBn": { "type": "string", "maxLength": 1000 },
+        "messageEn": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["unread", "read", "archived"] },
+        "linkTab": { "type": "string", "enum": ["categories", "drive", "activity", "calculator", "architect", "billing", "compliance"] },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "docName": { "type": "string" },
+            "riskScore": { "type": "number" },
+            "tierId": { "type": "string" },
+            "billingCycle": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "type", "titleEn", "messageEn", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -62,6 +107,14 @@
     "/users/{userId}/activity_logs/{logId}": {
       "schema": { "$ref": "#/entities/ActivityLog" },
       "description": "Enterprise compliance audit logs tracking document operations and user actions"
+    },
+    "/users/{userId}/subscription/current": {
+      "schema": { "$ref": "#/entities/UserSubscription" },
+      "description": "Current active B2B SaaS subscription tier and billing details for the authenticated user"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/InAppNotification" },
+      "description": "User in-app notifications for completed audits and subscription updates"
     }
   }
 }

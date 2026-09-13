@@ -13,6 +13,7 @@ import {
   subscribeToUserAudits,
   deleteAuditFromFirestore,
   logActivityToFirestore,
+  createNotificationInFirestore,
   SavedAuditItem,
 } from '../services/firestoreService';
 import {
@@ -191,6 +192,21 @@ export const DocumentIntelligence: React.FC<DocumentIntelligenceProps> = ({
           complianceStatus,
           clientEnvironment: authState.accessToken ? 'Google Workspace API v3 (OAuth)' : 'Document Auditor Engine',
         }).catch((e) => console.warn('Activity log write error:', e));
+
+        // Create persistent In-App Notification in Firestore for completed audit
+        createNotificationInFirestore(uid, {
+          type: 'AUDIT_COMPLETED',
+          titleEn: `Audit Completed: ${res.docName}`,
+          titleBn: `অডিট সম্পন্ন হয়েছে: ${res.docName}`,
+          messageEn: `Risk score: ${res.riskScore}/100. Category: ${res.docType}. Status: ${complianceStatus}.`,
+          messageBn: `ঝুঁকি স্কোর: ${res.riskScore}/100। ক্যাটাগরি: ${res.docType}। স্ট্যাটাস: ${complianceStatus === 'COMPLIANT' ? 'সম্মত (Compliant)' : 'পর্যালোচনা প্রয়োজন'}।`,
+          status: 'unread',
+          linkTab: 'drive',
+          metadata: {
+            docName: res.docName,
+            riskScore: res.riskScore,
+          },
+        }).catch((e) => console.warn('Notification creation notice:', e));
       }
     } catch (err) {
       console.error('Audit failed:', err);
